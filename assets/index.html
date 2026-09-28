@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="http://mdpeek.localhost/assets/marked.min.js"></script>
+<script src="http://mdpeek.localhost/assets/highlight.min.js"></script>
+<script src="http://mdpeek.localhost/assets/mermaid.min.js"></script>
+<style>
+:root {
+  --paper: #FAFAF8;
+  --ink: #1C2024;
+  --ink-2: #5A6270;
+  --hairline: #E4E2DC;
+  --accent: #0F766E;
+  --accent-soft: rgba(15,118,110,.14);
+  --code-bg: #F2F1EB;
+  --chrome-bg: #F4F3EF;
+}
+body.dark {
+  --paper: #1A1C20;
+  --ink: #DDD9D2;
+  --ink-2: #8A8F98;
+  --hairline: #2E3138;
+  --accent: #4DBEAF;
+  --accent-soft: rgba(77,190,175,.16);
+  --code-bg: #22252B;
+  --chrome-bg: #1F2126;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font: 16px/1.75 "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+}
+
+::selection { background: var(--accent-soft); }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 5px; border: 2px solid var(--paper); }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-2); }
+
+/* ============ article ============ */
+#content {
+  max-width: 46em;
+  margin: 0 auto;
+  padding: 48px 40px 96px;
+  min-width: 200px;
+}
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+  margin: 1.9em 0 .7em;
+}
+h1 { font-size: 1.85em; margin-top: 0; padding-bottom: .35em; border-bottom: 1px solid var(--hairline); }
+h2 { font-size: 1.45em; padding-bottom: .3em; border-bottom: 1px solid var(--hairline); }
+h3 { font-size: 1.18em; }
+h4 { font-size: 1.05em; }
+p { margin: .9em 0; }
+a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { text-decoration-thickness: 2px; }
+strong { font-weight: 650; }
+img { max-width: 100%; border-radius: 6px; }
+ul, ol { padding-left: 1.6em; margin: .9em 0; }
+li + li { margin-top: .3em; }
+li > ul, li > ol { margin: .3em 0; }
+input[type="checkbox"] { appearance: none; width: 15px; height: 15px; border: 1.5px solid var(--ink-2); border-radius: 4px; vertical-align: -2px; margin-right: 6px; cursor: default; }
+input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+input[type="checkbox"]:checked::after { content: ''; display: block; margin: 2.5px auto 0; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(42deg); }
+
+blockquote {
+  margin: 1.2em 0;
+  padding: .1em 0 .1em 1.1em;
+  border-left: 3px solid var(--accent-soft);
+  color: var(--ink-2);
+}
+blockquote blockquote { padding-left: 1em; }
+
+/* booktabs-style tables */
+table { border-collapse: collapse; margin: 1.4em 0; width: 100%; font-size: .94em; }
+thead { border-top: 2px solid var(--ink); }
+thead tr { border-bottom: 1px solid var(--ink-2); }
+tbody { border-bottom: 2px solid var(--ink); }
+th, td { padding: .5em .9em; text-align: left; border: none; }
+th { font-weight: 650; }
+tbody tr + tr { border-top: 1px solid var(--hairline); }
+tbody tr:nth-child(even) { background: transparent; }
+
+code {
+  font-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  font-size: .86em;
+  background: var(--code-bg);
+  padding: .15em .4em;
+  border-radius: 4px;
+}
+pre {
+  background: var(--code-bg);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 14px 18px;
+  overflow-x: auto;
+  margin: 1.2em 0;
+}
+pre code { background: none; padding: 0; font-size: .84em; line-height: 1.6; }
+.hljs { color: var(--ink); }
+.hljs-comment, .hljs-quote { color: var(--ink-2); font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-type { color: var(--accent); font-weight: 600; }
+.hljs-string, .hljs-regexp { color: #8A4B08; }
+.hljs-number, .hljs-literal { color: #3455DB; }
+.hljs-title, .hljs-name, .hljs-section { color: #6D28A8; }
+.hljs-attr, .hljs-attribute, .hljs-variable, .hljs-template-variable { color: #8A4B08; }
+.hljs-built_in, .hljs-builtin-name { color: var(--accent); }
+body.dark .hljs-string, body.dark .hljs-regexp { color: #D9A05B; }
+body.dark .hljs-number, body.dark .hljs-literal { color: #8DA6FF; }
+body.dark .hljs-title, body.dark .hljs-name, body.dark .hljs-section { color: #C79BFF; }
+body.dark .hljs-attr, body.dark .hljs-attribute, body.dark .hljs-variable { color: #D9A05B; }
+
+hr {
+  border: none;
+  text-align: center;
+  margin: 2.2em 0;
+  color: var(--ink-2);
+  letter-spacing: 1em;
+}
+hr::before { content: '···'; font-size: 1.1em; }
+
+kbd {
+  font-family: inherit;
+  font-size: .8em;
+  border: 1px solid var(--hairline);
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: .05em .45em;
+  background: var(--chrome-bg);
+}
+mark { background: var(--accent-soft); color: inherit; }
+sup { line-height: 0; }
+.mermaid { text-align: center; margin: 1.4em 0; }
+.mermaid svg { max-width: 100%; }
+
+/* ============ empty state ============ */
+#empty { text-align: center; margin-top: 26vh; color: var(--ink-2); }
+#empty .mark { font: 64px Georgia, serif; color: var(--accent); line-height: 1; }
+#empty .name { font-size: 20px; font-weight: 650; color: var(--ink); margin: 14px 0 6px; letter-spacing: .02em; }
+#empty .hint { font-size: 13px; }
+
+/* ============ source view ============ */
+#content.source-view { max-width: none; }
+#content.source-view pre.src {
+  font-size: 13px; line-height: 1.7; white-space: pre-wrap;
+  word-break: break-word; border: none; background: none; padding: 0;
+  font-family: "Cascadia Code", Consolas, monospace;
+}
+#content.source-view pre.src code { background: none; }
+
+/* ============ TOC sidebar (push layout, not overlay) ============ */
+#app { display: flex; }
+#main { flex: 1; min-width: 0; }
+#toc {
+  position: sticky; top: 0; height: 100vh;
+  width: 0; overflow: hidden; flex: none;
+  background: var(--chrome-bg);
+  transition: width .22s ease;
+  overflow-y: auto;
+}
+#toc.open { width: 264px; border-right: 1px solid var(--hairline); }
+body.toc-open #status { left: 264px; }
+#status { transition: left .22s ease; }
+#toc .toc-inner { width: 264px; padding: 16px 0 40px; }
+#toc .toc-head { display: flex; align-items: center; justify-content: space-between; padding: 0 12px 10px 20px; }
+#toc .toc-title { font-size: 11px; font-weight: 650; letter-spacing: .12em; color: var(--ink-2); }
+#toc .toc-close {
+  border: none; background: none; color: var(--ink-2); cursor: pointer;
+  font: 16px/1 system-ui, sans-serif; padding: 4px 8px; border-radius: 5px;
+}
+#toc .toc-close:hover { background: var(--accent-soft); color: var(--accent); }
+#toc a {
+  display: block; color: var(--ink-2); text-decoration: none;
+  font-size: 13px; line-height: 1.5; padding: 4px 20px;
+  border-left: 2px solid transparent;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+#toc a:hover { color: var(--ink); }
+#toc a.active { color: var(--accent); border-left-color: var(--accent); background: var(--accent-soft); }
+#toc a.l2 { padding-left: 34px; }
+#toc a.l3 { padding-left: 48px; font-size: 12.5px; }
+
+/* ============ status bar ============ */
+#status {
+  position: fixed; left: 0; right: 0; bottom: 0; height: 26px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; z-index: 400;
+  background: var(--chrome-bg); border-top: 1px solid var(--hairline);
+  font-size: 12px; color: var(--ink-2); user-select: none;
+}
+#status .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+#status .meta { white-space: nowrap; }
+#status .dot { color: var(--accent); margin: 0 .6em; }
+
+/* ============ context menu ============ */
+#ctxmenu {
+  position: fixed; display: none; z-index: 9999; min-width: 216px;
+  padding: 4px; border-radius: 8px;
+  font: 13px/1.5 "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  background: var(--chrome-bg); color: var(--ink);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 10px 32px rgba(0,0,0,.16), 0 2px 6px rgba(0,0,0,.08);
+}
+body.dark #ctxmenu { box-shadow: 0 10px 32px rgba(0,0,0,.55), 0 2px 6px rgba(0,0,0,.3); }
+#ctxmenu .item {
+  display: flex; align-items: center; padding: 5px 10px;
+  border-radius: 5px; cursor: default; white-space: nowrap;
+}
+#ctxmenu .item:hover { background: var(--accent); color: #fff; }
+#ctxmenu .item:hover .key, #ctxmenu .item:hover .chk { color: rgba(255,255,255,.7); }
+#ctxmenu .chk { width: 18px; font-size: 11px; color: var(--accent); flex: none; }
+#ctxmenu .lbl { flex: 1; }
+#ctxmenu .key { margin-left: 28px; font-size: 12px; color: var(--ink-2); }
+#ctxmenu hr { border: none; border-top: 1px solid var(--hairline); margin: 4px 8px; }
+
+/* ============ about dialog ============ */
+dialog#about {
+  border: 1px solid var(--hairline); border-radius: 12px;
+  background: var(--paper); color: var(--ink);
+  padding: 32px 40px; text-align: center;
+  box-shadow: 0 24px 64px rgba(0,0,0,.25);
+}
+dialog#about::backdrop { background: rgba(0,0,0,.35); }
+dialog#about .mark { font: 56px Georgia, serif; color: var(--accent); line-height: 1; }
+dialog#about h2 { border: none; margin: 10px 0 4px; font-size: 20px; }
+dialog#about .ver { color: var(--ink-2); font-size: 12px; margin-bottom: 18px; }
+dialog#about table { font-size: 12.5px; width: auto; margin: 0 auto; }
+dialog#about th, dialog#about td { padding: 3px 14px 3px 0; }
+dialog#about thead, dialog#about tbody { border: none; }
+dialog#about thead tr { border: none; }
+dialog#about tbody tr + tr { border: none; }
+dialog#about td:first-child { color: var(--ink-2); text-align: right; }
+dialog#about .close {
+  margin-top: 20px; padding: 6px 22px; border-radius: 6px; cursor: pointer;
+  border: 1px solid var(--hairline); background: var(--chrome-bg); color: var(--ink); font: inherit; font-size: 13px;
+}
+dialog#about .close:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+@media print {
+  #ctxmenu, #status, #toc, dialog { display: none !important; }
+  body { background: #fff; color: #000; }
+  #content { max-width: none; padding: 0; }
+  a { color: #000; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+<nav id="toc"><div class="toc-inner">
+  <div class="toc-head"><span class="toc-title">大 纲</span><button class="toc-close" title="收起大纲" onclick="toggleToc()">‹</button></div>
+  <div id="toc-items"></div>
+</div></nav>
+<div id="main"><article id="content"><div id="empty">
+  <div class="mark">¶</div>
+  <div class="name">mdpeek</div>
+  <div class="hint">拖入 .md 文件 &nbsp;·&nbsp; 右键查看菜单</div>
+</div></article></div>
+</div>
+
+<div id="status">
+  <span class="fname" id="st-file"></span>
+  <span class="meta" id="st-meta"></span>
+</div>
+
+<div id="ctxmenu"></div>
+
+<dialog id="about">
+  <div class="mark">¶</div>
+  <h2>mdpeek</h2>
+  <div class="ver">0.1.0 · Rust + WebView2 · marked / mermaid / highlight.js</div>
+  <table><tbody>
+    <tr><td>O</td><td>大纲</td></tr>
+    <tr><td>S</td><td>源码视图</td></tr>
+    <tr><td>E</td><td>用记事本打开</td></tr>
+    <tr><td>B</td><td>在资源管理器中显示</td></tr>
+    <tr><td>R / T</td><td>刷新 / 主题</td></tr>
+    <tr><td>Ctrl+滚轮</td><td>缩放</td></tr>
+  </tbody></table>
+  <button class="close" onclick="this.closest('dialog').close()">关 闭</button>
+</dialog>
+
+<script>
+const ORIGIN = 'http://mdpeek.localhost';
+let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+let source = null;
+let fileName = '';
+let showSource = false;
+let tocOpen = false;
+let onTop = false;
+let zoom = 1;
+
+function applyTheme() {
+  document.body.classList.toggle('dark', dark);
+  mermaid.initialize({
+    startOnLoad: false, securityLevel: 'loose',
+    theme: 'base',
+    themeVariables: dark ? {
+      background: '#1A1C20', primaryColor: '#22252B', primaryTextColor: '#DDD9D2',
+      primaryBorderColor: '#4DBEAF', lineColor: '#8A8F98', secondaryColor: '#22252B',
+      tertiaryColor: '#1F2126', fontFamily: 'inherit'
+    } : {
+      background: '#FAFAF8', primaryColor: '#F2F1EB', primaryTextColor: '#1C2024',
+      primaryBorderColor: '#0F766E', lineColor: '#5A6270', secondaryColor: '#F2F1EB',
+      tertiaryColor: '#FAFAF8', fontFamily: 'inherit'
+    }
+  });
+}
+
+function b64decode(b64) {
+  return new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
+}
+
+// called from rust: render('<base64 markdown>', 'file.md')
+function render(b64, name) {
+  source = b64decode(b64);
+  fileName = name || fileName;
+  rerender();
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function rerender() {
+  if (source === null) return;
+  const art = document.getElementById('content');
+  if (showSource) {
+    art.classList.add('source-view');
+    art.innerHTML = '<pre class="src"><code>' + esc(source) + '</code></pre>';
+  } else {
+    art.classList.remove('source-view');
+    art.innerHTML = marked.parse(source);
+    art.querySelectorAll('pre code.language-mermaid').forEach(c => {
+      const d = document.createElement('div');
+      d.className = 'mermaid';
+      d.textContent = c.textContent;
+      c.parentElement.replaceWith(d);
+    });
+    art.querySelectorAll('pre code:not(.language-mermaid)').forEach(c => hljs.highlightElement(c));
+    try { await mermaid.run({ querySelector: '#content .mermaid' }); } catch (e) { console.error(e); }
+  }
+  buildToc();
+  updateStatus();
+}
+
+/* ---------- status bar ---------- */
+function updateStatus() {
+  document.getElementById('st-file').textContent = fileName;
+  const meta = document.getElementById('st-meta');
+  if (source === null) { meta.textContent = ''; return; }
+  const chars = source.replace(/\s/g, '').length;
+  meta.innerHTML = `${chars.toLocaleString()} 字<span class="dot">·</span>${scrollPct()}%`;
+}
+function scrollPct() {
+  const h = document.documentElement;
+  const max = h.scrollHeight - h.clientHeight;
+  return max <= 0 ? 100 : Math.min(100, Math.round(h.scrollTop / max * 100));
+}
+let scrollRaf = false;
+document.addEventListener('scroll', () => {
+  if (scrollRaf) return;
+  scrollRaf = true;
+  requestAnimationFrame(() => { scrollRaf = false; updateStatus(); updateTocActive(); });
+}, { passive: true });
+
+/* ---------- TOC ---------- */
+function buildToc() {
+  const box = document.getElementById('toc-items');
+  box.innerHTML = '';
+  const heads = document.querySelectorAll('#content h1, #content h2, #content h3');
+  heads.forEach((h, i) => {
+    if (!h.id) h.id = 'h-' + i;
+    const a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent;
+    a.className = 'l' + h.tagName[1];
+    a.onclick = e => { e.preventDefault(); h.scrollIntoView({ behavior: 'smooth' }); };
+    box.appendChild(a);
+  });
+  updateTocActive();
+}
+function updateTocActive() {
+  const links = document.querySelectorAll('#toc-items a');
+  if (!links.length) return;
+  const heads = document.querySelectorAll('#content h1, #content h2, #content h3');
+  let cur = -1;
+  heads.forEach((h, i) => { if (h.getBoundingClientRect().top < 90) cur = i; });
+  links.forEach((a, i) => a.classList.toggle('active', i === (cur < 0 ? 0 : cur)));
+}
+function toggleToc() {
+  tocOpen = !tocOpen;
+  document.getElementById('toc').classList.toggle('open', tocOpen);
+  document.body.classList.toggle('toc-open', tocOpen);
+}
+function toggleSource() {
+  showSource = !showSource;
+  rerender();
+}
+
+/* ---------- zoom / keys ---------- */
+document.addEventListener('wheel', e => {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  zoom = Math.min(3, Math.max(0.3, zoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1)));
+  document.body.style.zoom = zoom;
+}, { passive: false });
+
+function setZoom(z) { zoom = z; document.body.style.zoom = z; }
+
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) {
+    if (e.key === '0' && e.ctrlKey) { e.preventDefault(); setZoom(1); }
+    return;
+  }
+  const k = e.key.toLowerCase();
+  if (k === 't') { dark = !dark; applyTheme(); rerender(); }
+  if (k === 'o') toggleToc();
+  if (k === 's' && source !== null) toggleSource();
+  if (k === 'r' && window.ipc) window.ipc.postMessage('reload');
+  if (k === 'e' && window.ipc) window.ipc.postMessage('edit-notepad');
+  if (k === 'b' && window.ipc) window.ipc.postMessage('open-explorer');
+});
+
+/* ---------- context menu ---------- */
+const menu = document.getElementById('ctxmenu');
+const hasFile = () => source !== null;
+const items = [
+  { label: '复制', key: 'Ctrl+C', act: () => document.execCommand('copy'), cond: () => !window.getSelection().isCollapsed },
+  { label: '全选', key: 'Ctrl+A', act: () => document.execCommand('selectAll') },
+  'sep',
+  { label: '大纲', key: 'O', checked: () => tocOpen, act: toggleToc, cond: hasFile },
+  { label: '查看 Markdown 源码', key: 'S', checked: () => showSource, act: toggleSource, cond: hasFile },
+  'sep',
+  { label: '用记事本打开', key: 'E', act: () => window.ipc.postMessage('edit-notepad'), cond: hasFile },
+  { label: '在资源管理器中显示', key: 'B', act: () => window.ipc.postMessage('open-explorer'), cond: hasFile },
+  { label: '复制文件路径', act: () => window.ipc.postMessage('copy-path'), cond: hasFile },
+  { label: '复制 Markdown 源码', act: () => window.ipc.postMessage('copy-source'), cond: hasFile },
+  'sep',
+  { label: '窗口置顶', checked: () => onTop, act: () => { onTop = !onTop; window.ipc.postMessage('toggle-ontop'); } },
+  { label: '刷新', key: 'R', act: () => window.ipc.postMessage('reload'), cond: hasFile },
+  { label: '主题切换', key: 'T', act: () => { dark = !dark; applyTheme(); rerender(); } },
+  'sep',
+  { label: '放大', key: 'Ctrl++', act: () => setZoom(Math.min(3, zoom * 1.1)) },
+  { label: '缩小', key: 'Ctrl+-', act: () => setZoom(Math.max(0.3, zoom / 1.1)) },
+  { label: '重置缩放', key: 'Ctrl+0', act: () => setZoom(1) },
+  'sep',
+  { label: '打印 / 导出 PDF', key: 'Ctrl+P', act: () => window.print() },
+  { label: '关于 mdpeek', act: () => document.getElementById('about').showModal() },
+];
+
+function hideMenu() { menu.style.display = 'none'; }
+
+document.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  menu.innerHTML = '';
+  let lastWasSep = true;
+  for (const it of items) {
+    if (it === 'sep') {
+      if (lastWasSep) continue;
+      menu.appendChild(document.createElement('hr'));
+      lastWasSep = true;
+      continue;
+    }
+    if (it.cond && !it.cond()) continue;
+    const d = document.createElement('div');
+    d.className = 'item';
+    const chk = it.checked ? (it.checked() ? '✓' : '') : '';
+    d.innerHTML = `<span class="chk">${chk}</span><span class="lbl">${it.label}</span><span class="key">${it.key || ''}</span>`;
+    d.onclick = () => { hideMenu(); it.act(); };
+    menu.appendChild(d);
+    lastWasSep = false;
+  }
+  menu.style.display = 'block';
+  const mw = menu.offsetWidth, mh = menu.offsetHeight;
+  menu.style.left = Math.min(e.clientX, innerWidth - mw - 8) + 'px';
+  menu.style.top = Math.min(e.clientY, innerHeight - mh - 8) + 'px';
+});
+document.addEventListener('mousedown', e => { if (!menu.contains(e.target)) hideMenu(); });
+document.addEventListener('blur', hideMenu);
+document.addEventListener('wheel', hideMenu);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { hideMenu(); if (tocOpen) toggleToc(); } });
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+  dark = e.matches; applyTheme(); rerender();
+});
+
+applyTheme();
+updateStatus();
+if (window.ipc) window.ipc.postMessage('ready');
+</script>
+</body>
+</html>
