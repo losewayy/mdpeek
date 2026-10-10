@@ -8,3 +8,6 @@ base64 = "0.23.1"
 notify = "8.2.0"
 tao = "0.37.1"
 wry = "0.57.0"
+
+[build-dependencies]
+winres = "0.1.12"

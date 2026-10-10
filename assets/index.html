@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 页面只跟自己说话：connect-src 关掉，堵住「渲染出的脚本把本地内容外发」这条路。
+     Markdown 里的原始 HTML 由 sanitize() 去掉事件属性，见正文说明。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <script src="http://mdpeek.localhost/assets/marked.min.js"></script>
 <script src="http://mdpeek.localhost/assets/highlight.min.js"></script>
 <script src="http://mdpeek.localhost/assets/mermaid.min.js"></script>
@@ -141,6 +144,42 @@ sup { line-height: 0; }
 .mermaid { text-align: center; margin: 1.4em 0; }
 .mermaid svg { max-width: 100%; }
 
+/* ============ toolbar ============ */
+#toolbar {
+  position: sticky; top: 0; z-index: 500;
+  display: flex; align-items: center; gap: 2px;
+  height: 38px; padding: 0 9px;
+  background: var(--chrome-bg);
+  border-bottom: 1px solid var(--hairline);
+  user-select: none;
+}
+#toolbar button {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 26px; padding: 0 9px;
+  border: none; border-radius: 6px; background: none; color: var(--ink-2);
+  font: 12.5px/1 "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", sans-serif;
+  cursor: default; white-space: nowrap;
+}
+#toolbar button:hover { background: var(--accent-soft); color: var(--accent); }
+#toolbar button.on { background: var(--accent); color: #fff; }
+#toolbar .ico { font-size: 13px; line-height: 1; }
+#toolbar .sep { width: 1px; height: 16px; background: var(--hairline); margin: 0 6px; flex: none; }
+#toolbar .spacer { flex: 1; }
+#dirty { font-size: 12px; color: var(--accent); padding-right: 4px; }
+
+/* ============ editor ============ */
+#editor {
+  display: none; width: 100%;
+  min-height: calc(100vh - 64px);
+  padding: 44px 40px 96px;
+  border: none; outline: none; resize: none;
+  background: var(--paper); color: var(--ink);
+  font: 14px/1.8 "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  tab-size: 2;
+}
+body.edit-mode #editor { display: block; }
+body.edit-mode #content { display: none; }
+
 /* ============ empty state ============ */
 #empty { text-align: center; margin-top: 26vh; color: var(--ink-2); }
 #empty .mark { font: 64px Georgia, serif; color: var(--accent); line-height: 1; }
@@ -160,7 +199,7 @@ sup { line-height: 0; }
 #app { display: flex; }
 #main { flex: 1; min-width: 0; }
 #toc {
-  position: sticky; top: 0; height: 100vh;
+  position: sticky; top: 38px; height: calc(100vh - 38px);
   width: 0; overflow: hidden; flex: none;
   background: var(--chrome-bg);
   transition: width .22s ease;
@@ -245,7 +284,7 @@ dialog#about .close {
 dialog#about .close:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 @media print {
-  #ctxmenu, #status, #toc, dialog { display: none !important; }
+  #ctxmenu, #status, #toc, #toolbar, #editor, dialog { display: none !important; }
   body { background: #fff; color: #000; }
   #content { max-width: none; padding: 0; }
   a { color: #000; }
@@ -253,6 +292,22 @@ dialog#about .close:hover { background: var(--accent); color: #fff; border-color
 </style>
 </head>
 <body>
+<div id="toolbar">
+  <button id="tb-edit" onclick="toggleEdit()" title="编辑 / 完成 (Ctrl+E)"><span class="ico">✎</span><span id="tb-edit-lbl">编辑</span></button>
+  <button id="tb-source" onclick="toggleSource()" title="Markdown 源码视图 (Ctrl+M)"><span class="ico">&lt;/&gt;</span>源码</button>
+  <button id="tb-toc" onclick="toggleToc()" title="大纲 (Ctrl+O)"><span class="ico">☰</span>大纲</button>
+  <span class="sep"></span>
+  <button id="tb-ontop" onclick="toggleOnTop()" title="窗口置顶"><span class="ico">⇪</span>置顶</button>
+  <button id="tb-theme" onclick="toggleTheme()" title="明 / 暗主题 (Ctrl+T)"><span class="ico">◐</span>主题</button>
+  <span class="sep"></span>
+  <button onclick="setZoom(Math.max(0.3, zoom / 1.1))" title="缩小 (Ctrl+-)">−</button>
+  <button onclick="setZoom(1)" title="重置缩放 (Ctrl+0)">100%</button>
+  <button onclick="setZoom(Math.min(3, zoom * 1.1))" title="放大 (Ctrl+=)">＋</button>
+  <span class="sep"></span>
+  <button onclick="window.print()" title="打印 / 导出 PDF (Ctrl+P)"><span class="ico">⎙</span>打印</button>
+  <span class="spacer"></span>
+  <span id="dirty"></span>
+</div>
 <div id="app">
 <nav id="toc"><div class="toc-inner">
   <div class="toc-head"><span class="toc-title">大 纲</span><button class="toc-close" title="收起大纲" onclick="toggleToc()">‹</button></div>
@@ -261,8 +316,8 @@ dialog#about .close:hover { background: var(--accent); color: #fff; border-color
 <div id="main"><article id="content"><div id="empty">
   <div class="mark">¶</div>
   <div class="name">mdpeek</div>
-  <div class="hint">拖入 .md 文件 &nbsp;·&nbsp; 右键查看菜单</div>
-</div></article></div>
+  <div class="hint">拖入 .md 文件 &nbsp;·&nbsp; 用上方工具栏或右键菜单操作</div>
+</div></article><textarea id="editor" spellcheck="false"></textarea></div>
 </div>
 
 <div id="status">
@@ -277,11 +332,15 @@ dialog#about .close:hover { background: var(--accent); color: #fff; border-color
   <h2>mdpeek</h2>
   <div class="ver">0.1.0 · Rust + WebView2 · marked / mermaid / highlight.js</div>
   <table><tbody>
-    <tr><td>O</td><td>大纲</td></tr>
-    <tr><td>S</td><td>源码视图</td></tr>
-    <tr><td>E</td><td>用记事本打开</td></tr>
-    <tr><td>B</td><td>在资源管理器中显示</td></tr>
-    <tr><td>R / T</td><td>刷新 / 主题</td></tr>
+    <tr><td>Ctrl+E</td><td>编辑 / 完成</td></tr>
+    <tr><td>Ctrl+S</td><td>保存（编辑中）</td></tr>
+    <tr><td>Ctrl+O</td><td>大纲</td></tr>
+    <tr><td>Ctrl+M</td><td>Markdown 源码视图</td></tr>
+    <tr><td>Ctrl+B</td><td>在资源管理器中显示</td></tr>
+    <tr><td>Ctrl+R</td><td>刷新</td></tr>
+    <tr><td>Ctrl+T</td><td>明 / 暗主题</td></tr>
+    <tr><td>Ctrl+P</td><td>打印 / 导出 PDF</td></tr>
+    <tr><td>Ctrl+0 / ±</td><td>重置 / 缩放</td></tr>
     <tr><td>Ctrl+滚轮</td><td>缩放</td></tr>
   </tbody></table>
   <button class="close" onclick="this.closest('dialog').close()">关 闭</button>
@@ -292,10 +351,13 @@ const ORIGIN = 'http://mdpeek.localhost';
 let dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 let source = null;
 let fileName = '';
+let docDir = '';
 let showSource = false;
 let tocOpen = false;
 let onTop = false;
 let zoom = 1;
+let editMode = false;
+let dirty = false;
 
 function applyTheme() {
   document.body.classList.toggle('dark', dark);
@@ -318,15 +380,69 @@ function b64decode(b64) {
   return new TextDecoder().decode(Uint8Array.from(atob(b64), c => c.charCodeAt(0)));
 }
 
-// called from rust: render('<base64 markdown>', 'file.md')
-function render(b64, name) {
-  source = b64decode(b64);
+// called from rust: render('<base64 markdown>', 'file.md', 'C:\\dir')
+function render(b64, name, dir) {
+  const incoming = b64decode(b64);
+  // 编辑中且有未保存改动时，不拿磁盘内容覆盖用户手上的缓冲区
+  if (editMode && dirty) return;
+  source = incoming;
   fileName = name || fileName;
+  if (dir !== undefined) docDir = dir;
+  if (editMode) { editMode = false; document.body.classList.remove('edit-mode'); }
   rerender();
+  updateToolbar();
+}
+
+/* ---------- 图片 ---------- */
+// 页面跑在 http://mdpeek.localhost/ 这个假 origin 上，相对图片会被浏览器按
+// 这个根去解析：`../pic.png` 里的 `..` 在请求发出前就被规范化掉，`C:\a.png`
+// 还会被当成 c: 协议。所以这里用文档真实目录先算成绝对路径，再交给协议读盘。
+function fixImages(root) {
+  if (!docDir) return;
+  const base = 'file:///' + docDir.replace(/\\/g, '/').replace(/\/?$/, '/');
+  root.querySelectorAll('img[src]').forEach(img => {
+    const src = img.getAttribute('src');
+    if (!src) return;
+    let abs;
+    if (/^[a-zA-Z]:[\\/]/.test(src)) {
+      abs = src;                                   // 已经是 Windows 绝对路径
+    } else if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(src)) {
+      return;                                      // http(s) / data: / 已重写过的，交给浏览器
+    } else {
+      try {
+        // new URL 会把 `..`、中文、空格一并规范化，pathname 再解出绝对路径
+        abs = decodeURIComponent(new URL(src, base).pathname.replace(/^\//, ''));
+      } catch (e) { return; }
+      // 没算成绝对路径就别动它，让 Rust 侧的兜底去解析——宁可退化，也不能指错文件
+      if (!/^[a-zA-Z]:[\\/]/.test(abs)) return;
+    }
+    img.src = 'http://mdpeek.localhost/__file?p=' + encodeURIComponent(abs);
+  });
 }
 
 function esc(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ---------- 渲染结果消毒 ---------- */
+// marked 会把 Markdown 里的原始 HTML 原样带出来，`<img src=x onerror=...>` 插入
+// 之后就会执行脚本（innerHTML 不跑 <script>，但事件属性会跑）。DOMParser 解析出的
+// 文档是惰性的：不执行脚本、不加载资源，先在那儿把事件属性和脚本类标签清掉，
+// 再把节点搬进页面。这样才配上「本地图片可读 + connect-src 关掉」的组合。
+function sanitize(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.body.querySelectorAll('*').forEach(el => {
+    for (const attr of Array.from(el.attributes)) {
+      const name = attr.name.toLowerCase();
+      if (name.startsWith('on')) { el.removeAttribute(attr.name); continue; }
+      if ((name === 'href' || name === 'src' || name === 'xlink:href')
+          && /^\s*(javascript|vbscript|data:text\/html)/i.test(attr.value)) {
+        el.removeAttribute(attr.name);
+      }
+    }
+  });
+  doc.body.querySelectorAll('script, iframe, object, embed, base').forEach(el => el.remove());
+  return Array.from(doc.body.childNodes);
 }
 
 async function rerender() {
@@ -337,7 +453,8 @@ async function rerender() {
     art.innerHTML = '<pre class="src"><code>' + esc(source) + '</code></pre>';
   } else {
     art.classList.remove('source-view');
-    art.innerHTML = marked.parse(source);
+    art.replaceChildren(...sanitize(marked.parse(source)));
+    fixImages(art);
     art.querySelectorAll('pre code.language-mermaid').forEach(c => {
       const d = document.createElement('div');
       d.className = 'mermaid';
@@ -399,11 +516,100 @@ function toggleToc() {
   tocOpen = !tocOpen;
   document.getElementById('toc').classList.toggle('open', tocOpen);
   document.body.classList.toggle('toc-open', tocOpen);
+  updateToolbar();
 }
 function toggleSource() {
+  if (editMode) return;
   showSource = !showSource;
   rerender();
+  updateToolbar();
 }
+function toggleTheme() {
+  dark = !dark;
+  applyTheme();
+  rerender();
+}
+function toggleOnTop() {
+  onTop = !onTop;
+  if (window.ipc) window.ipc.postMessage('toggle-ontop');
+  updateToolbar();
+}
+
+/* ---------- 工具栏 / 编辑模式 ---------- */
+function updateToolbar() {
+  const on = (id, v) => document.getElementById(id).classList.toggle('on', v);
+  on('tb-toc', tocOpen);
+  on('tb-source', showSource && !editMode);
+  on('tb-edit', editMode);
+  on('tb-ontop', onTop);
+  document.getElementById('tb-edit-lbl').textContent = editMode ? '完成' : '编辑';
+  document.getElementById('dirty').textContent = (editMode && dirty) ? '● 未保存' : '';
+  syncDirty();
+}
+
+// 脏状态只变的时候往 Rust 报一次：拖入新文件时它要靠这个决定能不能换保存目标
+let dirtySent = null;
+function syncDirty() {
+  const v = (editMode && dirty) ? '1' : '0';
+  if (v === dirtySent) return;
+  dirtySent = v;
+  if (window.ipc) window.ipc.postMessage('dirty:' + v);
+}
+
+// 由 rust 在拖入新文件且缓冲区有改动时调用
+function mdpeekConfirmDrop() {
+  if (confirm('有未保存的修改。切换到新文件会丢弃它们，继续吗？')) {
+    editMode = false;
+    dirty = false;
+    document.body.classList.remove('edit-mode');
+    updateToolbar();
+    if (window.ipc) window.ipc.postMessage('drop-continue');
+  } else if (window.ipc) {
+    window.ipc.postMessage('drop-cancel');
+  }
+}
+
+function toggleEdit() {
+  if (editMode) {
+    if (dirty && !confirm('有未保存的修改，确定放弃吗？')) return;
+    editMode = false;
+    dirty = false;
+    document.body.classList.remove('edit-mode');
+    rerender();
+    updateToolbar();
+  } else {
+    if (source === null) return;
+    editMode = true;
+    dirty = false;
+    const ed = document.getElementById('editor');
+    ed.value = source;
+    document.body.classList.add('edit-mode');
+    ed.focus();
+    updateToolbar();
+  }
+}
+
+function saveFile() {
+  if (!editMode) return;
+  const text = document.getElementById('editor').value;
+  if (window.ipc) window.ipc.postMessage('save:' + text);
+  else mdpeekSaved(true, '');
+}
+
+// 由 rust 在写盘后回调
+function mdpeekSaved(ok, err) {
+  if (!ok) { alert('保存失败：' + err); return; }
+  source = document.getElementById('editor').value;
+  editMode = false;
+  dirty = false;
+  document.body.classList.remove('edit-mode');
+  rerender();
+  updateToolbar();
+}
+
+document.getElementById('editor').addEventListener('input', () => {
+  if (!dirty) { dirty = true; updateToolbar(); }
+});
 
 /* ---------- zoom / keys ---------- */
 document.addEventListener('wheel', e => {
@@ -416,17 +622,36 @@ document.addEventListener('wheel', e => {
 function setZoom(z) { zoom = z; document.body.style.zoom = z; }
 
 document.addEventListener('keydown', e => {
-  if (e.ctrlKey || e.altKey || e.metaKey) {
-    if (e.key === '0' && e.ctrlKey) { e.preventDefault(); setZoom(1); }
+  if (e.isComposing) return;
+  if (e.key === 'Escape') {
+    hideMenu();
+    if (editMode) { toggleEdit(); return; }
+    if (tocOpen) toggleToc();
     return;
   }
-  const k = e.key.toLowerCase();
-  if (k === 't') { dark = !dark; applyTheme(); rerender(); }
-  if (k === 'o') toggleToc();
-  if (k === 's' && source !== null) toggleSource();
-  if (k === 'r' && window.ipc) window.ipc.postMessage('reload');
-  if (k === 'e' && window.ipc) window.ipc.postMessage('edit-notepad');
-  if (k === 'b' && window.ipc) window.ipc.postMessage('open-explorer');
+  if (!e.ctrlKey || e.altKey || e.metaKey) return;
+  // e.key 在部分输入法状态下会变成 'Process'，退回用物理键位代码
+  const k = ((e.key && e.key.length === 1) ? e.key : (e.code || '').replace(/^Key/, '')).toLowerCase();
+  const cmd = {
+    o: 'toc', e: 'edit', s: 'save', m: 'source', b: 'explorer',
+    r: 'reload', t: 'theme', p: 'print',
+    '0': 'zoom0', '=': 'zin', '+': 'zin', '-': 'zout'
+  }[k];
+  if (!cmd) return;
+  e.preventDefault();
+  switch (cmd) {
+    case 'toc': toggleToc(); break;
+    case 'edit': toggleEdit(); break;
+    case 'save': saveFile(); break;
+    case 'source': toggleSource(); break;
+    case 'explorer': if (source !== null && window.ipc) window.ipc.postMessage('open-explorer'); break;
+    case 'reload': if (source !== null && window.ipc) window.ipc.postMessage('reload'); break;
+    case 'theme': toggleTheme(); break;
+    case 'print': window.print(); break;
+    case 'zoom0': setZoom(1); break;
+    case 'zin': setZoom(Math.min(3, zoom * 1.1)); break;
+    case 'zout': setZoom(Math.max(0.3, zoom / 1.1)); break;
+  }
 });
 
 /* ---------- context menu ---------- */
@@ -434,19 +659,23 @@ const menu = document.getElementById('ctxmenu');
 const hasFile = () => source !== null;
 const items = [
   { label: '复制', key: 'Ctrl+C', act: () => document.execCommand('copy'), cond: () => !window.getSelection().isCollapsed },
+  { label: '剪切', key: 'Ctrl+X', act: () => document.execCommand('cut'), cond: () => editMode && !window.getSelection().isCollapsed },
+  { label: '粘贴', key: 'Ctrl+V', act: () => document.execCommand('paste'), cond: () => editMode },
+  { label: '撤销', key: 'Ctrl+Z', act: () => document.execCommand('undo'), cond: () => editMode },
   { label: '全选', key: 'Ctrl+A', act: () => document.execCommand('selectAll') },
   'sep',
-  { label: '大纲', key: 'O', checked: () => tocOpen, act: toggleToc, cond: hasFile },
-  { label: '查看 Markdown 源码', key: 'S', checked: () => showSource, act: toggleSource, cond: hasFile },
+  { label: '编辑', key: 'Ctrl+E', checked: () => editMode, act: toggleEdit, cond: hasFile },
+  { label: '大纲', key: 'Ctrl+O', checked: () => tocOpen, act: toggleToc, cond: hasFile },
+  { label: '查看 Markdown 源码', key: 'Ctrl+M', checked: () => showSource, act: toggleSource, cond: hasFile },
   'sep',
-  { label: '用记事本打开', key: 'E', act: () => window.ipc.postMessage('edit-notepad'), cond: hasFile },
-  { label: '在资源管理器中显示', key: 'B', act: () => window.ipc.postMessage('open-explorer'), cond: hasFile },
+  { label: '用记事本打开', act: () => window.ipc.postMessage('edit-notepad'), cond: hasFile },
+  { label: '在资源管理器中显示', key: 'Ctrl+B', act: () => window.ipc.postMessage('open-explorer'), cond: hasFile },
   { label: '复制文件路径', act: () => window.ipc.postMessage('copy-path'), cond: hasFile },
   { label: '复制 Markdown 源码', act: () => window.ipc.postMessage('copy-source'), cond: hasFile },
   'sep',
-  { label: '窗口置顶', checked: () => onTop, act: () => { onTop = !onTop; window.ipc.postMessage('toggle-ontop'); } },
-  { label: '刷新', key: 'R', act: () => window.ipc.postMessage('reload'), cond: hasFile },
-  { label: '主题切换', key: 'T', act: () => { dark = !dark; applyTheme(); rerender(); } },
+  { label: '窗口置顶', checked: () => onTop, act: toggleOnTop },
+  { label: '刷新', key: 'Ctrl+R', act: () => window.ipc.postMessage('reload'), cond: hasFile },
+  { label: '主题切换', key: 'Ctrl+T', act: toggleTheme },
   'sep',
   { label: '放大', key: 'Ctrl++', act: () => setZoom(Math.min(3, zoom * 1.1)) },
   { label: '缩小', key: 'Ctrl+-', act: () => setZoom(Math.max(0.3, zoom / 1.1)) },
@@ -486,7 +715,6 @@ document.addEventListener('contextmenu', e => {
 document.addEventListener('mousedown', e => { if (!menu.contains(e.target)) hideMenu(); });
 document.addEventListener('blur', hideMenu);
 document.addEventListener('wheel', hideMenu);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { hideMenu(); if (tocOpen) toggleToc(); } });
 
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
   dark = e.matches; applyTheme(); rerender();
@@ -494,6 +722,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e =
 
 applyTheme();
 updateStatus();
+updateToolbar();
 if (window.ipc) window.ipc.postMessage('ready');
 </script>
 </body>
